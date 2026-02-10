@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Local PO OCR</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main>
+    <h1>PO OCR (Local)</h1>
+    <form id="uploadForm">
+      <label>User ID <input type="text" id="userId" value="emp001" required /></label>
+      <label>PO Image <input type="file" id="poFile" accept=".jpg,.jpeg,.png" required /></label>
+      <button type="submit">Upload + Process</button>
+    </form>
+
+    <section>
+      <h2>Status</h2>
+      <p id="status">-</p>
+      <pre id="logs"></pre>
+    </section>
+
+    <section>
+      <h2>Extracted Fields (editable JSON)</h2>
+      <textarea id="resultJson" rows="18"></textarea>
+      <button id="confirmBtn">Confirm Save</button>
+      <p id="saveResult"></p>
+    </section>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>
