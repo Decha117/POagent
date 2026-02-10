@@ -17,7 +17,9 @@ class Settings(BaseSettings):
     worker_poll_interval_sec: float = 1.0
     auto_save: bool = False
     ocr_mode: str = "fast"  # fast | typhoon
-    typhoon_model_path: str = "models/typhoon-ocr1.5-2b"
+    typhoon_model_source: str = "local"  # local | huggingface
+    typhoon_model_ref: str = "models/typhoon-ocr1.5-2b"
+    hf_token: str | None = None
 
 
 settings = Settings()

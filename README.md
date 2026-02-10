@@ -76,7 +76,7 @@ pip install -e .
 
 > ถ้าต้องใช้ `OCR_MODE=typhoon`:
 > - ต้องมี PyTorch + Transformers (กำหนดไว้แล้วใน `pyproject.toml`)
-> - ตั้ง `TYPHOON_MODEL_PATH` เป็น path local ของโมเดลที่ดาวน์โหลดไว้แล้วเท่านั้น (ค่า default คือ `models/typhoon-ocr1.5-2b`)
+> - ตั้ง `TYPHOON_MODEL_SOURCE` และ `TYPHOON_MODEL_REF` ให้ตรงแหล่งโมเดล (local path หรือ Hugging Face repo id)
 
 ### 5.2 ตั้งค่า env
 ```bash
@@ -92,7 +92,9 @@ WORKER_COUNT=1
 ENABLE_IN_PROCESS_WORKER=true
 WORKER_POLL_INTERVAL_SEC=1.0
 AUTO_SAVE=false
-TYPHOON_MODEL_PATH=models/typhoon-ocr1.5-2b
+TYPHOON_MODEL_SOURCE=local
+TYPHOON_MODEL_REF=models/typhoon-ocr1.5-2b
+HF_TOKEN=
 ```
 
 ### 5.3 Run
@@ -114,8 +116,14 @@ TYPHOON_MODEL_PATH=models/typhoon-ocr1.5-2b
   - จำกัดไฟล์ไม่เกิน 8MB
   - ทำ preprocess แบบลด resolution เพื่อประหยัด RAM/CPU
 - เมื่อจะใช้ `OCR_MODE=typhoon`:
-  - ตั้ง `TYPHOON_MODEL_PATH=models/typhoon-ocr1.5-2b` (หรือ path local อื่นที่มีไฟล์โมเดลครบ)
-  - ระบบจะโหลดผ่าน `transformers` แบบ `local_files_only=True` เท่านั้น (ไม่ดึงไฟล์จาก network)
+  - Local model:
+    - `TYPHOON_MODEL_SOURCE=local`
+    - `TYPHOON_MODEL_REF=models/typhoon-ocr1.5-2b` (หรือ path local อื่นที่มีไฟล์โมเดลครบ)
+  - Hugging Face model:
+    - `TYPHOON_MODEL_SOURCE=huggingface`
+    - `TYPHOON_MODEL_REF=<org>/<repo>`
+    - ถ้าเป็น private repo ให้ใส่ `HF_TOKEN`
+  - โหมด local จะใช้ `local_files_only=True`; โหมด huggingface จะอนุญาตให้ดาวน์โหลดและ cache จาก network
   - หาก dependency ไม่ครบ / inference ล้มเหลว ระบบจะขึ้น error ทันที (ไม่มี fallback ไป `fast`)
 
 ## 7) ข้อจำกัดและ tuning บน Mac i5/8GB
