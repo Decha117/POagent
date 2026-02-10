@@ -56,8 +56,12 @@ class OCRResult(BaseModel):
 class JobResponse(BaseModel):
     id: str
     status: str
+    progress_percent: int
     user_id: str
     original_filename: str
+    created_at: str
+    updated_at: str
+    last_message: str | None = None
     error_message: str | None = None
     result: OCRResult | None = None
 
@@ -80,6 +84,16 @@ class UploadResponse(BaseModel):
 
 
 def from_job_record(job: Any) -> JobResponse:
+    progress_by_status = {
+        "queued": 5,
+        "processing": 20,
+        "extracting": 55,
+        "validating": 80,
+        "saving": 92,
+        "done": 100,
+        "failed": 100,
+    }
+    last_log = job.logs[-1].message if getattr(job, "logs", None) else None
     result = None
     if job.extracted_fields:
         result = OCRResult(
@@ -91,8 +105,12 @@ def from_job_record(job: Any) -> JobResponse:
     return JobResponse(
         id=job.id,
         status=job.status,
+        progress_percent=progress_by_status.get(job.status, 0),
         user_id=job.user_id,
         original_filename=job.original_filename,
+        created_at=job.created_at.isoformat(),
+        updated_at=job.updated_at.isoformat(),
+        last_message=last_log,
         error_message=job.error_message,
         result=result,
     )
