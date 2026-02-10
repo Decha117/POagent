@@ -8,7 +8,7 @@
 - **SQLite**: เหมาะกับเครื่องเดียว (Local) และย้ายไป PostgreSQL ได้ในอนาคต
 - **In-process Queue**: ใช้ `asyncio.Queue` + worker จำกัดจำนวน (`WORKER_COUNT=1` default) เพื่อไม่ให้เว็บค้างบน Mac i5 / RAM 8GB
 - **OCR Engine Strategy**:
-  - `typhoon` mode: จุด hook สำหรับ Typhoon OCR 1.5 2B (local model path)
+  - `typhoon` mode: ตอนนี้ยังเป็น placeholder และจะ fallback ไป `fast` พร้อมบันทึก warning/log ให้ผู้ใช้เห็น
   - `fast` mode: โหมดเบา ลดทรัพยากร (preprocess + OCR fallback)
 
 ## 2) โครงสร้างโปรเจค

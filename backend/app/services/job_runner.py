@@ -73,10 +73,16 @@ class JobRunner:
 
             await self._step(db, job, "extracting", "running OCR inference")
             raw = self.ocr.run(src)
+            append_job_log(db, job.id, "extracting", f"ocr engine={raw.engine}")
+            if raw.note:
+                append_job_log(db, job.id, "extracting", raw.note)
 
             await self._step(db, job, "validating", "parsing + validating structured data")
             fields, confidence, warnings = parse_po_text(raw.raw_text)
             validated = ExtractedFields(**fields)
+
+            if raw.note:
+                warnings = [raw.note, *warnings]
 
             job.raw_ocr_text = raw.raw_text
             job.extracted_fields = validated.model_dump()
