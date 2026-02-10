@@ -10,7 +10,6 @@ from ..models import Job, PORecord
 from ..schemas import ExtractedFields
 from .logger import append_job_log
 from .ocr import OCRService, parse_po_text
-from .preprocess import preprocess_image
 
 
 class EventBus:
@@ -69,13 +68,11 @@ class JobRunner:
             if not job:
                 return
 
-            await self._step(db, job, "processing", "loading and preprocessing image")
+            await self._step(db, job, "processing", "loading uploaded image")
             src = Path(job.file_path)
-            processed = src.parent / "processed.png"
-            preprocess_image(src, processed, fast_mode=(settings.ocr_mode == "fast"))
 
             await self._step(db, job, "extracting", "running OCR inference")
-            raw = self.ocr.run(processed)
+            raw = self.ocr.run(src)
 
             await self._step(db, job, "validating", "parsing + validating structured data")
             fields, confidence, warnings = parse_po_text(raw.raw_text)
