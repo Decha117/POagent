@@ -4,7 +4,10 @@ import asyncio
 from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
+
+from sqlalchemy import select
 from sqlalchemy.orm import Session
+
 from ..config import settings
 from ..database import SessionLocal
 from ..models import Job, PORecord
@@ -40,12 +43,17 @@ class JobRunner:
         self.ocr = OCRService(settings.ocr_mode, settings.typhoon_model_path)
         self.workers: list[asyncio.Task] = []
 
-    async def start(self):
+    async def start_queue_workers(self):
         for _ in range(max(1, settings.worker_count)):
             self.workers.append(asyncio.create_task(self.worker_loop()))
 
+    async def start_db_polling_workers(self):
+        for _ in range(max(1, settings.worker_count)):
+            self.workers.append(asyncio.create_task(self.polling_worker_loop()))
+
     async def enqueue(self, job_id: str):
-        await self.queue.put(job_id)
+        if settings.enable_in_process_worker:
+            await self.queue.put(job_id)
 
     async def worker_loop(self):
         while True:
@@ -54,6 +62,28 @@ class JobRunner:
                 await self.process_job(job_id)
             finally:
                 self.queue.task_done()
+
+    async def polling_worker_loop(self):
+        while True:
+            job_id = self._claim_next_queued_job()
+            if job_id:
+                await self.process_job(job_id)
+                continue
+            await asyncio.sleep(max(settings.worker_poll_interval_sec, 0.1))
+
+    def _claim_next_queued_job(self) -> str | None:
+        db = SessionLocal()
+        try:
+            stmt = select(Job).where(Job.status == "queued").order_by(Job.created_at.asc())
+            job = db.execute(stmt).scalars().first()
+            if not job:
+                return None
+            job.status = "processing"
+            db.add(job)
+            db.commit()
+            return job.id
+        finally:
+            db.close()
 
     async def _step(self, db: Session, job: Job, status: str, message: str, extra: dict | None = None):
         progress_by_status = {
@@ -87,7 +117,8 @@ class JobRunner:
             if not job:
                 return
 
-            await self._step(db, job, "processing", "loading uploaded image")
+            if job.status != "processing":
+                await self._step(db, job, "processing", "loading uploaded image")
             src = Path(job.file_path)
 
             await self._step(db, job, "extracting", "running OCR inference")
