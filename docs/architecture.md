@@ -3,7 +3,7 @@
 - **Backend**: FastAPI + SQLite + SQLAlchemy.
 - **Queue**: in-process `asyncio.Queue` + single worker by default (`WORKER_COUNT=1`) to protect Mac i5/8GB from overload.
 - **OCR**:
-  - `OCR_MODE=typhoon`: hook for local Typhoon OCR 1.5 2B model path.
+  - `OCR_MODE=typhoon`: local Typhoon OCR 1.5 2B inference via Transformers (with fast fallback only on failure).
   - `OCR_MODE=fast`: lower-resource path (optionally pytesseract, else deterministic fallback) for reliability.
 - **Realtime**: SSE endpoint (`/job/{id}/stream`) pushes status/log events.
 - **Storage**: `storage/uploads/{job_id}` for files, `storage/job_logs/{job_id}.log` for per-job logs, `storage/system.log` for system logs.
