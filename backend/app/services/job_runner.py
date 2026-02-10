@@ -40,7 +40,12 @@ event_bus = EventBus()
 class JobRunner:
     def __init__(self):
         self.queue: asyncio.Queue[str] = asyncio.Queue()
-        self.ocr = OCRService(settings.ocr_mode, settings.typhoon_model_path)
+        self.ocr = OCRService(
+            settings.ocr_mode,
+            settings.typhoon_model_ref,
+            settings.typhoon_model_source,
+            settings.hf_token,
+        )
         self.workers: list[asyncio.Task] = []
 
     async def start_queue_workers(self):

@@ -17,9 +17,17 @@ class OCRService:
     _typhoon_processor = None
     _typhoon_device: str | None = None
 
-    def __init__(self, mode: str, typhoon_model_path: str):
+    def __init__(
+        self,
+        mode: str,
+        typhoon_model_ref: str,
+        typhoon_model_source: str = "local",
+        hf_token: str | None = None,
+    ):
         self.mode = mode
-        self.typhoon_model_path = typhoon_model_path
+        self.typhoon_model_ref = typhoon_model_ref
+        self.typhoon_model_source = typhoon_model_source
+        self.hf_token = hf_token
 
     def run(self, image_path: Path) -> OCRRawOutput:
         if self.mode == "typhoon":
@@ -57,23 +65,43 @@ class OCRService:
 
         device = "cuda" if torch.cuda.is_available() else "cpu"
         dtype = torch.float16 if device == "cuda" else torch.float32
-        model_source = Path(self.typhoon_model_path)
-        if not model_source.exists():
-            raise FileNotFoundError(
-                "Typhoon OCR local model path not found. "
-                "Set TYPHOON_MODEL_PATH to a downloaded local model directory."
+        model_source = self.typhoon_model_source.lower()
+        model_ref = self.typhoon_model_ref
+
+        if model_source == "local":
+            local_model_path = Path(model_ref)
+            if not local_model_path.exists():
+                raise FileNotFoundError(
+                    "Typhoon OCR local model path not found. "
+                    "Set TYPHOON_MODEL_REF to a downloaded local model directory "
+                    "or switch TYPHOON_MODEL_SOURCE=huggingface with a valid repo id."
+                )
+            pretrained_ref = str(local_model_path)
+            local_files_only = True
+        elif model_source == "huggingface":
+            pretrained_ref = model_ref
+            local_files_only = False
+        else:
+            raise ValueError(
+                "Unsupported TYPHOON_MODEL_SOURCE. "
+                "Use 'local' or 'huggingface'."
             )
 
+        common_kwargs = {
+            "local_files_only": local_files_only,
+            "trust_remote_code": True,
+        }
+        if self.hf_token:
+            common_kwargs["token"] = self.hf_token
+
         processor = AutoProcessor.from_pretrained(
-            str(model_source),
-            local_files_only=True,
-            trust_remote_code=True,
+            pretrained_ref,
+            **common_kwargs,
         )
         model = auto_model_cls.from_pretrained(
-            str(model_source),
-            local_files_only=True,
-            trust_remote_code=True,
+            pretrained_ref,
             torch_dtype=dtype,
+            **common_kwargs,
         )
         model.to(device)
         model.eval()
