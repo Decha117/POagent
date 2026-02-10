@@ -7,6 +7,9 @@ pydantic-settings>=2.3
 aiofiles>=24.1
 pillow>=10.3
 opencv-python-headless>=4.10
-torch>=2.3
+# NOTE: Some environments (including older mirrors and macOS/Python combos)
+# do not yet provide torch>=2.3 wheels. Keep torch on the latest broadly
+# available 2.2 line for compatibility.
+torch>=2.2,<2.3
 transformers>=4.44
 accelerate>=0.33
