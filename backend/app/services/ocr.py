@@ -55,15 +55,17 @@ class OCRService:
 
         device = "cuda" if torch.cuda.is_available() else "cpu"
         dtype = torch.float16 if device == "cuda" else torch.float32
+        model_source = self.typhoon_model_path
+        local_files_only = Path(model_source).exists()
 
         processor = AutoProcessor.from_pretrained(
-            self.typhoon_model_path,
-            local_files_only=True,
+            model_source,
+            local_files_only=local_files_only,
             trust_remote_code=True,
         )
         model = AutoModelForVision2Seq.from_pretrained(
-            self.typhoon_model_path,
-            local_files_only=True,
+            model_source,
+            local_files_only=local_files_only,
             trust_remote_code=True,
             torch_dtype=dtype,
         )
@@ -76,11 +78,6 @@ class OCRService:
         return model, processor
 
     def _run_typhoon(self, image_path: Path) -> OCRRawOutput:
-        if not Path(self.typhoon_model_path).exists():
-            fast_result = self._run_fast(image_path)
-            fast_result.note = "Typhoon OCR model path not found; falling back to fast OCR"
-            return fast_result
-
         try:
             import torch
             from PIL import Image

@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     worker_count: int = 1
     auto_save: bool = False
     ocr_mode: str = "fast"  # fast | typhoon
-    typhoon_model_path: str = "models/typhoon-ocr-1.5-2b"
+    typhoon_model_path: str = "typhoon-ai/typhoon-ocr1.5-2b"
 
 
 settings = Settings()
