@@ -8,7 +8,7 @@
 - **SQLite**: เหมาะกับเครื่องเดียว (Local) และย้ายไป PostgreSQL ได้ในอนาคต
 - **In-process Queue**: ใช้ `asyncio.Queue` + worker จำกัดจำนวน (`WORKER_COUNT=1` default) เพื่อไม่ให้เว็บค้างบน Mac i5 / RAM 8GB
 - **OCR Engine Strategy**:
-  - `typhoon` mode: ตอนนี้ยังเป็น placeholder และจะ fallback ไป `fast` พร้อมบันทึก warning/log ให้ผู้ใช้เห็น
+  - `typhoon` mode: ทำ local inference จริงด้วยโมเดล Typhoon OCR 1.5 2B (ผ่าน `transformers`)
   - `fast` mode: โหมดเบา ลดทรัพยากร (preprocess + OCR fallback)
 
 ## 2) โครงสร้างโปรเจค
@@ -72,6 +72,10 @@ pip install -e .
 > ถ้าต้องใช้ OCR จริงผ่าน pytesseract:
 > - ติดตั้ง tesseract ในเครื่อง (เช่น `brew install tesseract tesseract-lang`)
 
+> ถ้าต้องใช้ `OCR_MODE=typhoon`:
+> - ต้องมี PyTorch + Transformers (กำหนดไว้แล้วใน `pyproject.toml`)
+> - ต้องมีโมเดล Typhoon OCR 1.5 2B อยู่ที่ `TYPHOON_MODEL_PATH`
+
 ### 5.2 ตั้งค่า env
 ```bash
 cp .env.example .env
@@ -102,7 +106,8 @@ TYPHOON_MODEL_PATH=models/typhoon-ocr-1.5-2b
   - ทำ preprocess แบบลด resolution เพื่อประหยัด RAM/CPU
 - เมื่อจะใช้ `OCR_MODE=typhoon`:
   - วางโมเดล local ใน `models/typhoon-ocr-1.5-2b`
-  - หากโหลดไม่สำเร็จ ระบบ fallback ไป `fast` อัตโนมัติ
+  - ระบบจะรัน inference ด้วย Typhoon จริง
+  - หากโมเดลหาย / dependency ไม่ครบ / inference ล้มเหลว จะ fallback ไป `fast` อัตโนมัติพร้อมบันทึก note
 
 ## 7) ข้อจำกัดและ tuning บน Mac i5/8GB
 - ควรประมวลผลทีละงาน (`WORKER_COUNT=1`) เพื่อเลี่ยง CPU spike
@@ -126,4 +131,3 @@ TYPHOON_MODEL_PATH=models/typhoon-ocr-1.5-2b
 5. หน้าเว็บแสดงสถานะ (queued / processing / extracting / validating / saving / done / failed) + live logs ผ่าน SSE
 6. OCR result แสดงใน text area (แก้ไขได้)
 7. กด Confirm เพื่อบันทึก DB
-
