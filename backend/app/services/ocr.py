@@ -8,6 +8,8 @@ from dataclasses import dataclass
 @dataclass
 class OCRRawOutput:
     raw_text: str
+    engine: str
+    note: str | None = None
 
 
 class OCRService:
@@ -27,7 +29,7 @@ class OCRService:
 
             text = pytesseract.image_to_string(Image.open(image_path), lang="tha+eng")
             if text.strip():
-                return OCRRawOutput(raw_text=text)
+                return OCRRawOutput(raw_text=text, engine="fast")
         except Exception:
             pass
 
@@ -38,14 +40,23 @@ class OCRService:
             "Sub Total: 1000.00\nVAT 7%: 70.00\nGrand Total: 1070.00\n"
             "Item A qty 2 unit pcs unit_price 500 line_total 1000"
         )
-        return OCRRawOutput(raw_text=simulated)
+        return OCRRawOutput(raw_text=simulated, engine="fast", note="using simulated OCR text")
 
     def _run_typhoon(self, image_path: Path) -> OCRRawOutput:
         if not Path(self.typhoon_model_path).exists():
-            return self._run_fast(image_path)
+            fast_result = self._run_fast(image_path)
+            fast_result.note = (
+                "Typhoon OCR model path not found; falling back to fast OCR"
+            )
+            return fast_result
         # Placeholder for real local Typhoon OCR integration.
         # Production hook: load model/tokenizer from self.typhoon_model_path and infer.
-        return self._run_fast(image_path)
+        fast_result = self._run_fast(image_path)
+        fast_result.note = (
+            "Typhoon OCR mode selected but integration is not implemented yet; "
+            "falling back to fast OCR"
+        )
+        return fast_result
 
 
 def parse_po_text(raw_text: str) -> tuple[dict, dict[str, float], list[str]]:
