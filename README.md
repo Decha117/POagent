@@ -74,7 +74,7 @@ pip install -e .
 
 > ถ้าต้องใช้ `OCR_MODE=typhoon`:
 > - ต้องมี PyTorch + Transformers (กำหนดไว้แล้วใน `pyproject.toml`)
-> - ต้องมีโมเดล Typhoon OCR 1.5 2B อยู่ที่ `TYPHOON_MODEL_PATH`
+> - ตั้ง `TYPHOON_MODEL_PATH` เป็นชื่อโมเดลบน Hugging Face (ค่า default คือ `typhoon-ai/typhoon-ocr1.5-2b`) หรือ path local ก็ได้
 
 ### 5.2 ตั้งค่า env
 ```bash
@@ -88,7 +88,7 @@ MAX_UPLOAD_MB=8
 OCR_MODE=fast
 WORKER_COUNT=1
 AUTO_SAVE=false
-TYPHOON_MODEL_PATH=models/typhoon-ocr-1.5-2b
+TYPHOON_MODEL_PATH=typhoon-ai/typhoon-ocr1.5-2b
 ```
 
 ### 5.3 Run แบบ 1 บรรทัด
@@ -105,9 +105,9 @@ TYPHOON_MODEL_PATH=models/typhoon-ocr-1.5-2b
   - จำกัดไฟล์ไม่เกิน 8MB
   - ทำ preprocess แบบลด resolution เพื่อประหยัด RAM/CPU
 - เมื่อจะใช้ `OCR_MODE=typhoon`:
-  - วางโมเดล local ใน `models/typhoon-ocr-1.5-2b`
-  - ระบบจะรัน inference ด้วย Typhoon จริง
-  - หากโมเดลหาย / dependency ไม่ครบ / inference ล้มเหลว จะ fallback ไป `fast` อัตโนมัติพร้อมบันทึก note
+  - ตั้ง `TYPHOON_MODEL_PATH=typhoon-ai/typhoon-ocr1.5-2b` (หรือระบุ path local ของโมเดล)
+  - ระบบจะโหลดโมเดลผ่าน `transformers` จาก Hugging Face อัตโนมัติเมื่อไม่ใช่ path local
+  - หาก dependency ไม่ครบ / inference ล้มเหลว จะ fallback ไป `fast` อัตโนมัติพร้อมบันทึก note
 
 ## 7) ข้อจำกัดและ tuning บน Mac i5/8GB
 - ควรประมวลผลทีละงาน (`WORKER_COUNT=1`) เพื่อเลี่ยง CPU spike
