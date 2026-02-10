@@ -5,6 +5,7 @@ const statusEl = document.getElementById('status');
 const logsEl = document.getElementById('logs');
 const resultJsonEl = document.getElementById('resultJson');
 const saveResultEl = document.getElementById('saveResult');
+const poPreviewEl = document.getElementById('poPreview');
 
 document.getElementById('uploadForm').addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -15,6 +16,8 @@ document.getElementById('uploadForm').addEventListener('submit', async (e) => {
   logsEl.textContent = '';
   resultJsonEl.value = '';
   saveResultEl.textContent = '';
+  poPreviewEl.hidden = true;
+  poPreviewEl.removeAttribute('src');
 
   const fd = new FormData();
   fd.append('user_id', userId);
@@ -24,6 +27,10 @@ document.getElementById('uploadForm').addEventListener('submit', async (e) => {
   const payload = await resp.json();
   activeJobId = payload.job_id;
   statusEl.textContent = payload.status;
+  if (payload.file_url) {
+    poPreviewEl.src = payload.file_url;
+    poPreviewEl.hidden = false;
+  }
   connectSSE(activeJobId);
   pollJob(activeJobId);
 });

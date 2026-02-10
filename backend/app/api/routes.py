@@ -56,7 +56,8 @@ async def upload_po(
 
     append_job_log(db, job_id, "queued", "job created and queued")
     await job_runner.enqueue(job_id)
-    return UploadResponse(job_id=job_id, status="queued")
+    relative_path = file_path.relative_to(settings.uploads_dir)
+    return UploadResponse(job_id=job_id, status="queued", file_url=f"/uploads/{relative_path.as_posix()}")
 
 
 @router.get("/job/{job_id}")
