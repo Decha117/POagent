@@ -20,7 +20,12 @@ class Job(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    logs: Mapped[list["JobLog"]] = relationship("JobLog", back_populates="job", cascade="all, delete-orphan")
+    logs: Mapped[list["JobLog"]] = relationship(
+        "JobLog",
+        back_populates="job",
+        cascade="all, delete-orphan",
+        order_by="JobLog.id",
+    )
 
 
 class JobLog(Base):

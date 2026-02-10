@@ -3,6 +3,7 @@ let source = null;
 
 const statusEl = document.getElementById('status');
 const logsEl = document.getElementById('logs');
+const statusMetaEl = document.getElementById('statusMeta');
 const resultJsonEl = document.getElementById('resultJson');
 const saveResultEl = document.getElementById('saveResult');
 const poPreviewEl = document.getElementById('poPreview');
@@ -27,6 +28,7 @@ document.getElementById('uploadForm').addEventListener('submit', async (e) => {
   const payload = await resp.json();
   activeJobId = payload.job_id;
   statusEl.textContent = payload.status;
+  statusMetaEl.textContent = 'Progress: 5%';
   if (payload.file_url) {
     poPreviewEl.src = payload.file_url;
     poPreviewEl.hidden = false;
@@ -39,7 +41,7 @@ async function pollJob(jobId) {
   const timer = setInterval(async () => {
     const resp = await fetch(`/job/${jobId}`);
     const job = await resp.json();
-    statusEl.textContent = job.status;
+    renderStatus(job);
     if (job.result) {
       resultJsonEl.value = JSON.stringify(job.result.extracted_fields, null, 2);
     }
@@ -50,13 +52,23 @@ async function pollJob(jobId) {
   }, 1200);
 }
 
+function renderStatus(job) {
+  statusEl.textContent = job.status;
+  const progress = Number.isFinite(job.progress_percent) ? job.progress_percent : 0;
+  const updatedAt = job.updated_at ? new Date(job.updated_at).toLocaleString() : '-';
+  const lastMessage = job.last_message || '-';
+  statusMetaEl.textContent = `Progress: ${progress}% | Last update: ${updatedAt} | Message: ${lastMessage}`;
+}
+
 function connectSSE(jobId) {
   if (source) source.close();
   source = new EventSource(`/job/${jobId}/stream`);
   source.onmessage = (evt) => {
     const data = JSON.parse(evt.data);
-    const now = new Date().toISOString();
-    logsEl.textContent += `[${now}] ${data.status} - ${data.message}\n`;
+    const at = data.ts || new Date().toISOString();
+    const progress = typeof data.progress_percent === 'number' ? ` (${data.progress_percent}%)` : '';
+    const detail = data.total_duration_ms ? ` | total=${data.total_duration_ms}ms` : '';
+    logsEl.textContent += `[${at}] ${data.status}${progress} - ${data.message}${detail}\n`;
     logsEl.scrollTop = logsEl.scrollHeight;
   };
 }

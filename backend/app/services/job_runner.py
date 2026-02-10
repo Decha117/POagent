@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from collections import defaultdict
+from datetime import datetime, timezone
 from pathlib import Path
 from sqlalchemy.orm import Session
 from ..config import settings
@@ -54,15 +55,33 @@ class JobRunner:
             finally:
                 self.queue.task_done()
 
-    async def _step(self, db: Session, job: Job, status: str, message: str):
+    async def _step(self, db: Session, job: Job, status: str, message: str, extra: dict | None = None):
+        progress_by_status = {
+            "queued": 5,
+            "processing": 20,
+            "extracting": 55,
+            "validating": 80,
+            "saving": 92,
+            "done": 100,
+            "failed": 100,
+        }
         job.status = status
         db.add(job)
         db.commit()
         append_job_log(db, job.id, status, message)
-        await event_bus.publish(job.id, {"status": status, "message": message})
+        payload = {
+            "status": status,
+            "message": message,
+            "progress_percent": progress_by_status.get(status, 0),
+            "ts": datetime.now(timezone.utc).isoformat(),
+        }
+        if extra:
+            payload.update(extra)
+        await event_bus.publish(job.id, payload)
 
     async def process_job(self, job_id: str):
         db = SessionLocal()
+        overall_start = asyncio.get_running_loop().time()
         try:
             job = db.get(Job, job_id)
             if not job:
@@ -72,8 +91,11 @@ class JobRunner:
             src = Path(job.file_path)
 
             await self._step(db, job, "extracting", "running OCR inference")
+            ocr_started = asyncio.get_running_loop().time()
             raw = self.ocr.run(src)
+            ocr_ms = int((asyncio.get_running_loop().time() - ocr_started) * 1000)
             append_job_log(db, job.id, "extracting", f"ocr engine={raw.engine}")
+            append_job_log(db, job.id, "extracting", f"ocr duration_ms={ocr_ms}")
             if raw.note:
                 append_job_log(db, job.id, "extracting", raw.note)
 
@@ -93,15 +115,20 @@ class JobRunner:
                 await self._save_record(db, job, validated.model_dump())
                 await self._step(db, job, "saving", "auto-save enabled, data persisted")
 
-            await self._step(db, job, "done", "ocr complete")
+            total_ms = int((asyncio.get_running_loop().time() - overall_start) * 1000)
+            await self._step(
+                db,
+                job,
+                "done",
+                "ocr complete",
+                extra={"engine": raw.engine, "ocr_duration_ms": ocr_ms, "total_duration_ms": total_ms},
+            )
         except Exception as exc:
             if job := db.get(Job, job_id):
-                job.status = "failed"
                 job.error_message = str(exc)
                 db.add(job)
                 db.commit()
-                append_job_log(db, job.id, "failed", str(exc))
-                await event_bus.publish(job.id, {"status": "failed", "message": str(exc)})
+                await self._step(db, job, "failed", str(exc))
         finally:
             db.close()
 
