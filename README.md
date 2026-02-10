@@ -66,6 +66,8 @@ pyproject.toml
 python3 -m venv .venv
 source .venv/bin/activate
 pip install --upgrade pip
+pip install -r requirements.txt
+# หรือถ้าต้องการติดตั้งแบบ editable
 pip install -e .
 ```
 
