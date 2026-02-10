@@ -31,4 +31,5 @@ async def startup_event():
     settings.uploads_dir.mkdir(parents=True, exist_ok=True)
     settings.job_logs_dir.mkdir(parents=True, exist_ok=True)
     Base.metadata.create_all(bind=engine)
-    await job_runner.start()
+    if settings.enable_in_process_worker:
+        await job_runner.start_queue_workers()

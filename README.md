@@ -6,7 +6,7 @@
 - **FastAPI (Backend)**: จัดการ upload, queue, OCR pipeline, validation, persistence
 - **Frontend (Vanilla JS + SSE)**: แสดงสถานะและ log แบบเรียลไทม์ + ฟอร์มแก้ไขผล OCR
 - **SQLite**: เหมาะกับเครื่องเดียว (Local) และย้ายไป PostgreSQL ได้ในอนาคต
-- **In-process Queue**: ใช้ `asyncio.Queue` + worker จำกัดจำนวน (`WORKER_COUNT=1` default) เพื่อไม่ให้เว็บค้างบน Mac i5 / RAM 8GB
+- **Queue + Worker modes**: รองรับทั้ง in-process worker (dev) และแยก OCR worker เป็นคนละ process (production/background)
 - **OCR Engine Strategy**:
   - `typhoon` mode: ทำ local inference จริงด้วยโมเดล Typhoon OCR 1.5 2B (ผ่าน `transformers`)
   - `fast` mode: โหมดเบา ลดทรัพยากร (preprocess + OCR fallback)
@@ -89,13 +89,20 @@ APP_NAME=Local PO OCR
 MAX_UPLOAD_MB=8
 OCR_MODE=fast
 WORKER_COUNT=1
+ENABLE_IN_PROCESS_WORKER=true
+WORKER_POLL_INTERVAL_SEC=1.0
 AUTO_SAVE=false
 TYPHOON_MODEL_PATH=models/typhoon-ocr1.5-2b
 ```
 
-### 5.3 Run แบบ 1 บรรทัด
+### 5.3 Run
 ```bash
-./scripts/run.sh
+# โหมดพัฒนา: เปิด --reload และ ignore .venv
+./scripts/run.sh dev
+
+# โหมด production แนะนำ: แยก web/worker คนละ process
+./scripts/run.sh web
+./scripts/run.sh worker
 ```
 
 เปิดเว็บ: `http://localhost:8000`
@@ -133,3 +140,10 @@ TYPHOON_MODEL_PATH=models/typhoon-ocr1.5-2b
 5. หน้าเว็บแสดงสถานะ (queued / processing / extracting / validating / saving / done / failed) + live logs ผ่าน SSE
 6. OCR result แสดงใน text area (แก้ไขได้)
 7. กด Confirm เพื่อบันทึก DB
+
+## 10) Worker topology ที่แนะนำ
+- Development: ใช้ `./scripts/run.sh dev` เพื่อความสะดวก (web + in-process worker)
+- Production/background OCR: แยก process ชัดเจน
+  - web: `./scripts/run.sh web` (ไม่มี `--reload`)
+  - worker: `./scripts/run.sh worker`
+- เหตุผล: ลดปัญหา auto-reload interrupt งาน OCR และป้องกัน watcher ไปจับไฟล์ใน `.venv`

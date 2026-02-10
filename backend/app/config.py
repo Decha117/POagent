@@ -13,6 +13,8 @@ class Settings(BaseSettings):
     max_upload_mb: int = 8
     allowed_extensions: tuple[str, ...] = (".jpg", ".jpeg", ".png")
     worker_count: int = 1
+    enable_in_process_worker: bool = True
+    worker_poll_interval_sec: float = 1.0
     auto_save: bool = False
     ocr_mode: str = "fast"  # fast | typhoon
     typhoon_model_path: str = "models/typhoon-ocr1.5-2b"
