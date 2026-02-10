@@ -100,69 +100,62 @@ class OCRService:
         )
 
     def _run_typhoon(self, image_path: Path) -> OCRRawOutput:
-        try:
-            import torch
-            from PIL import Image
+        import torch
+        from PIL import Image
 
-            model, processor = self._load_typhoon_components()
-            device = OCRService._typhoon_device or "cpu"
+        model, processor = self._load_typhoon_components()
+        device = OCRService._typhoon_device or "cpu"
 
-            image = Image.open(image_path).convert("RGB")
-            prompt = (
-                "Extract all visible text from this purchase order image. "
-                "Keep line breaks and preserve key-value formatting. "
-                "Do not add explanations."
+        image = Image.open(image_path).convert("RGB")
+        prompt = (
+            "Extract all visible text from this purchase order image. "
+            "Keep line breaks and preserve key-value formatting. "
+            "Do not add explanations."
+        )
+
+        if hasattr(processor, "apply_chat_template"):
+            messages = [
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "image"},
+                        {"type": "text", "text": prompt},
+                    ],
+                }
+            ]
+            text_input = processor.apply_chat_template(
+                messages,
+                tokenize=False,
+                add_generation_prompt=True,
+            )
+            inputs = processor(
+                text=[text_input],
+                images=[image],
+                return_tensors="pt",
+            )
+        else:
+            inputs = processor(images=image, text=prompt, return_tensors="pt")
+
+        inputs = {
+            k: (v.to(device) if isinstance(v, torch.Tensor) else v)
+            for k, v in inputs.items()
+        }
+
+        with torch.inference_mode():
+            generated = model.generate(**inputs, max_new_tokens=2048)
+
+        prompt_len = inputs["input_ids"].shape[-1] if "input_ids" in inputs else 0
+        trimmed = generated[:, prompt_len:] if prompt_len else generated
+        text = processor.batch_decode(trimmed, skip_special_tokens=True)[0].strip()
+
+        if text:
+            return OCRRawOutput(
+                raw_text=text,
+                engine="typhoon",
+                note=f"Typhoon OCR local inference ({device})",
             )
 
-            if hasattr(processor, "apply_chat_template"):
-                messages = [
-                    {
-                        "role": "user",
-                        "content": [
-                            {"type": "image"},
-                            {"type": "text", "text": prompt},
-                        ],
-                    }
-                ]
-                text_input = processor.apply_chat_template(
-                    messages,
-                    tokenize=False,
-                    add_generation_prompt=True,
-                )
-                inputs = processor(
-                    text=[text_input],
-                    images=[image],
-                    return_tensors="pt",
-                )
-            else:
-                inputs = processor(images=image, text=prompt, return_tensors="pt")
-
-            inputs = {
-                k: (v.to(device) if isinstance(v, torch.Tensor) else v)
-                for k, v in inputs.items()
-            }
-
-            with torch.inference_mode():
-                generated = model.generate(**inputs, max_new_tokens=2048)
-
-            prompt_len = inputs["input_ids"].shape[-1] if "input_ids" in inputs else 0
-            trimmed = generated[:, prompt_len:] if prompt_len else generated
-            text = processor.batch_decode(trimmed, skip_special_tokens=True)[0].strip()
-
-            if text:
-                return OCRRawOutput(
-                    raw_text=text,
-                    engine="typhoon",
-                    note=f"Typhoon OCR local inference ({device})",
-                )
-
-            fast_result = self._run_fast(image_path)
-            fast_result.note = "Typhoon returned empty text; falling back to fast OCR"
-            return fast_result
-        except Exception as exc:
-            fast_result = self._run_fast(image_path)
-            fast_result.note = f"Typhoon OCR inference error: {exc}; falling back to fast OCR"
-            return fast_result
+        raise RuntimeError("Typhoon OCR returned empty text")
 
 
 def parse_po_text(raw_text: str) -> tuple[dict, dict[str, float], list[str]]:
