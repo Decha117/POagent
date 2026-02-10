@@ -51,7 +51,9 @@ class OCRService:
             return OCRService._typhoon_model, OCRService._typhoon_processor
 
         import torch
-        from transformers import AutoModelForVision2Seq, AutoProcessor
+        from transformers import AutoProcessor
+
+        auto_model_cls = self._resolve_typhoon_auto_model_class()
 
         device = "cuda" if torch.cuda.is_available() else "cpu"
         dtype = torch.float16 if device == "cuda" else torch.float32
@@ -67,7 +69,7 @@ class OCRService:
             local_files_only=True,
             trust_remote_code=True,
         )
-        model = AutoModelForVision2Seq.from_pretrained(
+        model = auto_model_cls.from_pretrained(
             str(model_source),
             local_files_only=True,
             trust_remote_code=True,
@@ -80,6 +82,22 @@ class OCRService:
         OCRService._typhoon_processor = processor
         OCRService._typhoon_device = device
         return model, processor
+
+    @staticmethod
+    def _resolve_typhoon_auto_model_class():
+        """Resolve a vision-language AutoModel class across transformers versions."""
+        import transformers
+
+        for class_name in ("AutoModelForVision2Seq", "AutoModelForImageTextToText"):
+            auto_model_cls = getattr(transformers, class_name, None)
+            if auto_model_cls is not None:
+                return auto_model_cls
+
+        raise ImportError(
+            "Unable to find a compatible Transformers auto model class for Typhoon OCR. "
+            "Expected one of: AutoModelForVision2Seq, AutoModelForImageTextToText. "
+            "Please upgrade transformers to a supported version."
+        )
 
     def _run_typhoon(self, image_path: Path) -> OCRRawOutput:
         try:
