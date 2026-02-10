@@ -55,17 +55,21 @@ class OCRService:
 
         device = "cuda" if torch.cuda.is_available() else "cpu"
         dtype = torch.float16 if device == "cuda" else torch.float32
-        model_source = self.typhoon_model_path
-        local_files_only = Path(model_source).exists()
+        model_source = Path(self.typhoon_model_path)
+        if not model_source.exists():
+            raise FileNotFoundError(
+                "Typhoon OCR local model path not found. "
+                "Set TYPHOON_MODEL_PATH to a downloaded local model directory."
+            )
 
         processor = AutoProcessor.from_pretrained(
-            model_source,
-            local_files_only=local_files_only,
+            str(model_source),
+            local_files_only=True,
             trust_remote_code=True,
         )
         model = AutoModelForVision2Seq.from_pretrained(
-            model_source,
-            local_files_only=local_files_only,
+            str(model_source),
+            local_files_only=True,
             trust_remote_code=True,
             torch_dtype=dtype,
         )
