@@ -107,7 +107,7 @@ TYPHOON_MODEL_PATH=models/typhoon-ocr1.5-2b
 
 เปิดเว็บ: `http://localhost:8000`
 
-## 6) Typhoon OCR 1.5 2B และ fallback
+## 6) Typhoon OCR 1.5 2B
 - สำหรับเครื่อง MacBook Pro 13" 2019 (Intel i5, RAM 8GB):
   - เริ่มด้วย `OCR_MODE=fast`
   - ใช้ `WORKER_COUNT=1`
@@ -116,7 +116,7 @@ TYPHOON_MODEL_PATH=models/typhoon-ocr1.5-2b
 - เมื่อจะใช้ `OCR_MODE=typhoon`:
   - ตั้ง `TYPHOON_MODEL_PATH=models/typhoon-ocr1.5-2b` (หรือ path local อื่นที่มีไฟล์โมเดลครบ)
   - ระบบจะโหลดผ่าน `transformers` แบบ `local_files_only=True` เท่านั้น (ไม่ดึงไฟล์จาก network)
-  - หาก dependency ไม่ครบ / inference ล้มเหลว จะ fallback ไป `fast` อัตโนมัติพร้อมบันทึก note
+  - หาก dependency ไม่ครบ / inference ล้มเหลว ระบบจะขึ้น error ทันที (ไม่มี fallback ไป `fast`)
 
 ## 7) ข้อจำกัดและ tuning บน Mac i5/8GB
 - ควรประมวลผลทีละงาน (`WORKER_COUNT=1`) เพื่อเลี่ยง CPU spike
