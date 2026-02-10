@@ -18,6 +18,9 @@ app.add_middleware(
 )
 app.include_router(router)
 
+settings.uploads_dir.mkdir(parents=True, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=str(settings.uploads_dir)), name="uploads")
+
 frontend_dir = Path("frontend")
 if frontend_dir.exists():
     app.mount("/", StaticFiles(directory=str(frontend_dir), html=True), name="frontend")

@@ -76,6 +76,7 @@ class LogLine(BaseModel):
 class UploadResponse(BaseModel):
     job_id: str
     status: str
+    file_url: str
 
 
 def from_job_record(job: Any) -> JobResponse:
